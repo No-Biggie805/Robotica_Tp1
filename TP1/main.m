@@ -1,12 +1,68 @@
+clear all; close all; clc
+
 An_img = imread('/home/asuna/Documents/Licenciatura2-3anos/1_semestre/Robotica/TP1/allSignals.png');
 
+%% setup da camara
+NumberFrameDisplayPerSecond = 30;% Define o Frame Rate
+% Liberta a Camara ao Correr o Codigo
+objects = imaqfind; % Encontra Entrada de Video na Memoria
+delete(objects)
 
-%fazer um input manual da imagem, por enquanto....
+% Set-up da Entrada de Video
+try
+    vid = videoinput('winvideo', 1, 'RGB24_1280x720');% Windows
+catch
+    try
+        vid = videoinput('macvideo', 1); % Macs.
+    catch
+        errordlg('No webcam available');% Em caso de erro
+    end
+end
+
+% Define os Parametros para o Video
+set(vid,'FramesPerTrigger',1);% Aquisicao de um Frame
+set(vid,'TriggerRepeat',Inf);% Aquisicao Continua
+set(vid,'ReturnedColorSpace','RGB');% Aquisicao de Imagem em RGBa
+triggerconfig(vid, 'Manual');
+while true
+    % Timer que Chama a Funcao Processamento
+    TimerData=timer('TimerFcn', {@Processamento,vid},'Period',1/NumberFrameDisplayPerSecond,'ExecutionMode','fixedRate','BusyMode','drop');
+
+    start(vid); %Inicio do Video
+    start(TimerData); %Inicio do Timer
+end
+
+%     Apaga os Objectos Criados
+stop(TimerData);
+delete(TimerData);
+stop(vid);
+delete(vid);
+% Apaga as Variaveis do Tipo Persistent
+clear functions;
+imaqreset;
 
 
+%% Função Processamento
+function Processamento(obj, event,vidd)% Funcao que e chamada de n em n segundo
+% Variaveis do Tipo Persistent para Evitar Estar Sempre a Alocar Memoria
+persistent im;
+
+trigger(vidd);% Da um Trigger
+im = getdata(vidd,1,'uint8');%l? os dados da imagem
+
+% Declaração de variáveis
+% n = 0; 
+% maskRed = 0;
+% maskYellow = 0;
+% maskBlue = 0;
+im = flip(im ,2); % Espelhar a Imagem, pois a Camara Espelha a Real
+
+
+
+%% inicio das cenas
 gray = rgb2gray(An_img);
 % m_bin = gray > 10;
-% 
+%
 % m_hsv = rgb2hsv(An_img);
 
 %Estas implimentaoes foram tiradas da extensao de imagens, 'Colour
@@ -55,7 +111,7 @@ CircleMetric = cat(1, s.Centroid);%Extract centroid coordinates:
 %fim circulos
 
 Area = cat(1,s.Area);%extracting the area of the connected components and stores them in the Area variable
-Ratio = cat(1,s.MajorAxisLength) - cat(1,s.MinorAxisLength);% calculate the aspect ratio by subtracting the minor axis length from the major axis length 
+Ratio = cat(1,s.MajorAxisLength) - cat(1,s.MinorAxisLength);% calculate the aspect ratio by subtracting the minor axis length from the major axis length
 
 % Initialize TriangleMetric with NaN values for each component
 TriangleMetric = NaN(CC.NumObjects, 1);
@@ -64,7 +120,7 @@ boxArea = m_minbbarea(Filter_low_region);
 
 %for each boundary, fit to bounding box, and calculate some parameters
 for k=1:length(TriangleMetric),
-   TriangleMetric(k) = Area(k)/boxArea(k);  %filled area vs box area
+    TriangleMetric(k) = Area(k)/boxArea(k);  %filled area vs box area
 end
 
 isCircle = circular > 0.96;
@@ -76,14 +132,14 @@ m_circles(m_idxCirc) = 1;%passar m_idxCirc a 1.
 figure,imshow(m_circles)
 
 %inicio triangulos
-isTriangle = ~(circular > 0.96) & (TriangleMetric < 0.65);%tirar os circulos, e filtrar deixar os triangulos, quanto mais perto 
+isTriangle = ~(circular > 0.96) & (TriangleMetric < 0.65);%tirar os circulos, e filtrar deixar os triangulos, quanto mais perto
 %de 1 a figura e mais proxima de ser um circulo, senao sera outra figura
 %como o triangulo ali apresentado.
 m_idxTriang = cat(1,CC.PixelIdxList{isTriangle});
 m_triangles = zeros(size(gray, 1), size(gray, 2));
 m_triangles(m_idxTriang) = 1;
 figure,imshow(m_triangles)
-%fim triangulos 
+%fim triangulos
 
 %Mostrar o quadrado todo que tem trapezios?
 %Juntar os trapezios ao quadrado de volta mas em binario, com fill(pq e a figura toda ocupada)
@@ -122,13 +178,13 @@ figure,imshow(m_close)
 
 %possivel Problema: converter img binaria a gray e a cores dps.
 
-%no for() mostrar a gray e a cores individualmente 
+%no for() mostrar a gray e a cores individualmente
 
 %grayscale era o azual e amarelo era a cor.
 
 %help for(), ver como funfa,
 
-%contas gray: img_bin * 
+%contas gray: img_bin *
 
 %UPDATE!!!!
 %passar imgs p/gray e bin, para cor, fzr bwconcomp do num e figuras e fazer
@@ -144,9 +200,9 @@ CC_Red = bwconncomp(bin_fill_red);
 s_red = regionprops(CC_Red, 'Centroid', 'Area');
 
 
-%1º tentativa, tentar so com a mascara a vermelho+gray+hsv xp, depois ver com bwconncomp 
+%1º tentativa, tentar so com a mascara a vermelho+gray+hsv xp, depois ver com bwconncomp
 %duvidas, perceber como fazer retorno d
-           
+
 
 multi = uint8(m_triangles); % Converter para 8bits
 submask = An_img.*multi; % Multiplicar a Imagem Binaria com a Original
@@ -154,30 +210,37 @@ figure,imshow(submask)
 
 
 
-if CC_Red.NumObjects >= 1
+if CC_Red.NumObjects >= 1       %se num objectos for 1 ou mais
 
-for i = 1:CC_Red.NumObjects
+    for i = 1:CC_Red.NumObjects %percorrer pelos mesmos
 
-     if numel(CC_Red.PixelIdxList{i}) > 1
-     %code to handle the triangles
-     %Invert the mask
-     inverted_mask = ~bin_fill_red;
-     for j = 1:CC_Red:NumObjects
-     end
-     elseif CC_Red.NumObjects == 1
+        if numel(CC_Red.PixelIdxList{i}) > 1 
+            %code to handle the triangles
+            %Invert the mask
 
-     end
+            
+
+
+
+            % inverted_mask = ~bin_fill_red;
+            % for j = 1:CC_Red:NumObjects
+            % 
+            
+            end
+        elseif CC_Red.NumObjects == 1
+
+        end
+
+    end
 
 end
 
-end
 
 
 
-
-% 
+%
 % %Loop em cada forma:
-% for i in 
+% for i in
 %     %Extrair informacoes sobre as formas
 %     centroid = s(i).Centroid;
 %     area = s(i).Area;
@@ -185,7 +248,7 @@ end
 %     minorAxisLength = s(i).MinorAxisLength;
 %     eccentricity = s(i).Eccentricity;
 %     pixelIdxList = s(i).PixelIdxList;
-% 
+%
 %     %Aplicar logica para filtrar a forma(de volta a RGB ou cinza)
 %     if isCircle(centroid, area, eccentricity)
 %     %circle doshit
@@ -193,7 +256,7 @@ end
 %     intensity_background = 0;
 %     m_circles = intensity_background + intensity_background * m_circles;
 %     figure,imshow(m_circles)
-% 
+%
 %     elseif isTriangle(majorAxisLength, minorAxisLength)
 %     %triangle doshit
 %     intensity_foreground = 255;
@@ -202,7 +265,7 @@ end
 %     figure,imshow(m_triangles)
 %     end
 % end
-% 
-% 
-% 
-% 
+%
+%
+%
+%
