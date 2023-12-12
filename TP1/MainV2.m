@@ -9,7 +9,7 @@ delete(objects)
 
 % Set-up da Entrada de Video
 try
-    vid = videoinput('winvideo', 1, 'RGB24_1280x720');% Windows
+    vid = videoinput('winvideo', 1, 'MJPG_1280x720');% Windows
 catch
     try
         vid = videoinput('macvideo', 1); % Macs.
@@ -53,9 +53,9 @@ im = getdata(vidd,1,'uint8');%l? os dados da imagem
 
 % Declaração de variáveis
 n = 0; %Variavel chave, ou condiçao de paragem
-MascaraVermelha = 0;
-MascaraAmarela = 0;
-MascaraAzul = 0;
+maskRed = 0;
+maskYellow = 0;
+maskBlue = 0;
 im = flip(im ,2); % Espelhar a Imagem, pois a Camara Espelha a Real
 
 %% Aplicação das máscaras
@@ -254,7 +254,8 @@ while n < 5 %caso chega a 5, parou, MASSS, perguntar ao chatGPT!!!
                             end
                         end
                         stats =  regionprops(filterBlack,'PixelIdxList','Area','Centroid'); % Centro do Objeto
-                        middleRow = stats.Centroid(2); % Define que o a Linha de Separacao para Contar Pixeis vai a Posicao da Coordenada Y do Centroid
+                        middleRow = stats.Centroid(2); % De
+% fine que o a Linha de Separacao para Contar Pixeis vai a Posicao da Coordenada Y do Centroid
                         upperHalf = floor(nnz(filterBlack(1:middleRow,:))); % Conta os Pixeis Brancos Acima do Centro do Objeto
                         lowerHalf = floor(nnz(filterBlack(middleRow+1:end,:))); % Conta os Pixeis Brancos Abaixo do Centro do Objeto
                         compare = abs(upperHalf - lowerHalf); % Pequena Comparacao na Diferenca dos Pixeis, pois o Sinal de Neve Teoricamente e Simetrico
