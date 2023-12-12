@@ -158,6 +158,7 @@ while n < 5 %caso chega a 5, parou, MASSS, perguntar ao chatGPT!!!
             if maskYellow == 1 % Se for Mascara Amarela
                 filtro = createMaskRedYellowSign(submask); % Aplica um Filtro Vermelho para Detetar os Objetos Vermelhos Dentro do Sinal Amarelo(Filtrar Amarelo e vermelho)
                 cc = bwconncomp(filtro); % Bounding Box no Objeto que Detetou
+
                 stats =  regionprops(BW2,'PixelIdxList','Area'); % Retirar as Areas de todos os Objetos Detetados na Imagem
 
                 Area = cat(1,stats.Area);
@@ -174,7 +175,6 @@ while n < 5 %caso chega a 5, parou, MASSS, perguntar ao chatGPT!!!
                     filtro = createMaskBlackHSV(submask); %fazer mascara para so pretos
                     cc = bwconncomp(filtro);
                     stats =  regionprops(BW2,'PixelIdxList','Area'); % Retirar as Areas de todos os Objetos Detetados na Imagem
-
                     Area = cat(1,stats.Area);
                     % Eliminar Objetos Indesejados / Ruído
                     [maxValue,index] = max([stats.Area]); %Guarda o Objeto com a Maior Area
@@ -189,20 +189,26 @@ while n < 5 %caso chega a 5, parou, MASSS, perguntar ao chatGPT!!!
 
                 %% Começar verificar sinais azuis
             elseif maskBlue == 1 % Se for Mascara Azul
-                if isCircle ~= 1 % Se na Mascara Azul o Objeto nao For Redondo (Sinal sem Saida é um Quadrado)
+                if isCircle ~= 1 && isSquare == 1 % Se na Mascara Azul o Objeto nao For Redondo (Sinal sem Saida é um Quadrado)
                     title("Sinal Estacionamento") % Mostra o Sinal Estacionamento
-                    title("Sinal de Parque") % Mostra o Tipo de Sinal
-                else  % No Caso de Ser Redondo
-
-
+                elseif isCircle == 1 && ~isSquare % No Caso de Ser Redondo
                     filterWhite = createMaskWhiteHSV(submask); % Aplicar um Filtro Branco para Extrair os Objetos Brancos Dentro dos Sinais Azuis
                     matrix = strel('square',10);% Matriz para Percorer a Imagem 5x5
                     erodedIm = imerode(filterWhite,matrix); % Imagem Fechada
-                    ccBlueSign = bwconncomp(erodedIm); % Fazer Bounding Box
+
+                    stats =  regionprops(BW2,'PixelIdxList','Area'); % Retirar as Areas de todos os Objetos Detetados na Imagem
+                    Area = cat(1,stats.Area);
+
+                    % Eliminar Objetos Indesejados / Ruído
+                    [maxValue,index] = max([stats.Area]); %Guarda o Objeto com a Maior Area
+                    [rw col]= size(stats);
+
+                    ccBlueSign = bwconncomp(erodedIm); % 
                     numObj = ccBlueSign.NumObjects; % Retirar o Numero de Objetos Identificados no Interior
+
                     if numObj == 1 % Caso hajam 3 Objeto
                         title("Sinal Obrigatório Direita") % Mostra Sinal Obrigatório Direita
-                    else
+                    elseif numObj > 1   %se for maior que 1
                         title("Sinal Obrigatório Luzes") % Mostra Sinal Obrigatório Luzes
                         % Melhorar a Imagem
                         for i=1:rw
@@ -214,20 +220,23 @@ while n < 5 %caso chega a 5, parou, MASSS, perguntar ao chatGPT!!!
                         % Saber a Orientacao da Seta
                         % figure,imhshow(erodedIm);
 
-                        %% Falar com o Sampaio
-                        stats =  regionprops(erodedIm,'Centroid'); % Centro do Objeto
-
-                        %explicado, linha nos relatorio
-                        middleColumn = floor(stats.Centroid(1)); % Define que o a Linha de Separacao para Contar Pixeis vai a Posicao da Coordenada X do Centroid
-                        leftHalf = floor(nnz(erodedIm(:,1:middleColumn))); % Contar os Pixeis a Esqueda da Coluna Central
-                        rightHalf = floor(nnz(erodedIm(:,middleColumn+1:end))); % Contar os Pixeis a Direita da Coluna Central
-                        if leftHalf > rightHalf % Se Houver mais Pixeis a Esquerda, a Seta Aponta para a Esquerda
-                            title("Sinal Virar Esquerda") % Display do Sinal
-                        else % Se Houver mais Pixeis a Direita, a Seta Aponta para a Direita
-                            title("Sinal Virar Direita")% Display do Sinal
-                        end
+                        % %% Falar com o Sampaio
+                        % stats =  regionprops(erodedIm,'Centroid'); % Centro do Objeto
+                        % 
+                        % %explicado, linha nos relatorio
+                        % middleColumn = floor(stats.Centroid(1)); % Define que o a Linha de Separacao para Contar Pixeis vai a Posicao da Coordenada X do Centroid
+                        % leftHalf = floor(nnz(erodedIm(:,1:middleColumn))); % Contar os Pixeis a Esqueda da Coluna Central
+                        % rightHalf = floor(nnz(erodedIm(:,middleColumn+1:end))); % Contar os Pixeis a Direita da Coluna Central
+                        % if leftHalf > rightHalf % Se Houver mais Pixeis a Esquerda, a Seta Aponta para a Esquerda
+                        %     title("Sinal Virar Esquerda") % Display do Sinal
+                        % else % Se Houver mais Pixeis a Direita, a Seta Aponta para a Direita
+                        %     title("Sinal Virar Direita")% Display do Sinal
+                        % end
                     end
-                end
+                end               
+                
+               
+                
                 %% Começar verificar sinais vermelhos
             elseif maskRed == 1 % Se for Mascara Vermelha
                 if isCircle == 1 % Se Detetar um Sinal Redondo
