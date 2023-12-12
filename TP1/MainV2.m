@@ -203,7 +203,7 @@ while n < 5 %caso chega a 5, parou, MASSS, perguntar ao chatGPT!!!
                     [maxValue,index] = max([stats.Area]); %Guarda o Objeto com a Maior Area
                     [rw col]= size(stats);
 
-                    ccBlueSign = bwconncomp(erodedIm); % 
+                    ccBlueSign = bwconncomp(erodedIm); %
                     numObj = ccBlueSign.NumObjects; % Retirar o Numero de Objetos Identificados no Interior
 
                     if numObj == 1 % Caso hajam 3 Objeto
@@ -222,7 +222,7 @@ while n < 5 %caso chega a 5, parou, MASSS, perguntar ao chatGPT!!!
 
                         % %% Falar com o Sampaio
                         % stats =  regionprops(erodedIm,'Centroid'); % Centro do Objeto
-                        % 
+                        %
                         % %explicado, linha nos relatorio
                         % middleColumn = floor(stats.Centroid(1)); % Define que o a Linha de Separacao para Contar Pixeis vai a Posicao da Coordenada X do Centroid
                         % leftHalf = floor(nnz(erodedIm(:,1:middleColumn))); % Contar os Pixeis a Esqueda da Coluna Central
@@ -233,57 +233,69 @@ while n < 5 %caso chega a 5, parou, MASSS, perguntar ao chatGPT!!!
                         %     title("Sinal Virar Direita")% Display do Sinal
                         % end
                     end
-                end               
-                
-               
-                
+                end
+
+
+
                 %% Começar verificar sinais vermelhos
             elseif maskRed == 1 % Se for Mascara Vermelha
+                filterRed = createMaskRedHSV(submask);
+                ccRed = bwconncomp(filterRed);
+                stats =  regionprops(filterRed,'PixelIdxList','Area'); % Retirar as Areas de todos os Objetos Detetados na Imagem
+
+                Area = cat(1,stats.Area);
+                % Eliminar Objetos Indesejados / Ruído
+                [maxValue,index] = max([stats.Area]); %Guarda o Objeto com a Maior Area
+                [rw col]= size(stats);
+                numObj = ccRed.NumObjects;
+
                 if isCircle == 1 % Se Detetar um Sinal Redondo
                     filterBlack = createMaskBlackHSV(submask); % Aplica Mascara Preta para Detetar os Objetos Dentro
-                    ccBlack = bwconncomp(filterBlack); % ver objectos conectados
+                    ccBlack = bwconncomp(filterBlack); % Bounding Box
                     numObj = ccBlack.NumObjects; % Conta o Numero de Objetos Detetados
-                    if numObj >= 3 % Se Identificar Objetos
-                        title("Sinal Proibido 100km")
 
-                    elseif numObj == 2
-                        [maxValue,index] = max([stats.Area]); % Guarda a Area Maior Que vai Ser o Objeto do Interior
-                        [rw col]= size(stats);
-                        for i=1:rw
-                            if (i~=index)
-                                filterBlack(stats(i).PixelIdxList)=0; % Remove Todas as Pequenas Regions a Excepcao da Area Maior
-                            end
-                        end
-                        stats =  regionprops(filterBlack,'PixelIdxList','Area','Centroid'); % Centro do Objeto
-                        middleRow = stats.Centroid(2); % De
-                        % fine que o a Linha de Separacao para Contar Pixeis vai a Posicao da Coordenada Y do Centroid
-                        upperHalf = floor(nnz(filterBlack(1:middleRow,:))); % Conta os Pixeis Brancos Acima do Centro do Objeto
-                        lowerHalf = floor(nnz(filterBlack(middleRow+1:end,:))); % Conta os Pixeis Brancos Abaixo do Centro do Objeto
-                        compare = abs(upperHalf - lowerHalf); % Pequena Comparacao na Diferenca dos Pixeis, pois o Sinal de Neve Teoricamente e Simetrico
-                        if compare > 300 % Se a Diferenca for Maior que 300 Pixeis(Verificao Feita Depois de Varios Testes)
-                            title('Sinal Proibido 50km')
-                        else
-                            title('Sinal Proibido Direita')
-                        end
+                    matrix = strel('square',10);% Matriz para Percorer a Imagem 5x5
+                    erodedIm = imerode(filterWhite,matrix); % Imagem Fechada
 
-                    elseif numObj == 1
-                        title("Sinal Sentido Obrigatório Direita")
+                    if numObj > 2 % Se Identificar Objetos
+                        title('proibido 100km');
                     end
+                elseif numObj == 1
+                    title('sinal Seta')
+                    for i=1:rw
+                        if (i~=index)
+                            erodedIm(stats(i).PixelIdxList)= 0; % Remover Todos os Pixeis a Branco das Areas mais Pequenas
+                        end
+                    end
+                    stats =  regionprops(erodedIm,'Centroid'); % Centro do Objeto
 
-                end
+                    %explicado, linha nos relatorio
+                    middleColumn = floor(stats.Centroid(1)); % Define que o a Linha de Separacao para Contar Pixeis vai a Posicao da Coordenada X do Centroid
+                    leftHalf = floor(nnz(erodedIm(:,1:middleColumn))); % Contar os Pixeis a Esqueda da Coluna Central
+                    rightHalf = floor(nnz(erodedIm(:,middleColumn+1:end))); % Contar os Pixeis a Direita da Coluna Central
+                    if leftHalf > rightHalf % Se Houver mais Pixeis a Esquerda, a Seta Aponta para a Esquerda
+                        title("Sinal Proibido direita") % Display do Sinal
+                    else % Se Houver mais Pixeis a Direita, a Seta Aponta para a Direita
+                        title("Sinal Obrigatorio Direita")% Display do Sinal
+                    end
+                 end
 
             elseif isTriangle == 1 % Se o Sinal for Triangular
                 filterBlack = createMaskBlackHSV(submask); % Aplica um Filtro Preto Para Ler os Objetos do Centro do Sinal
                 stats =  regionprops(filterBlack,'PixelIdxList','Area'); %Retira os Dados das Areas dos Ojetos Detetados
-                ccBlack = bwconncomp(filterBlack); % Bounding Box
+                ccBlack = bwconncomp(filterBlack); %
+
+                Area = cat(1,stats.Area);
+                % Eliminar Objetos Indesejados / Ruído
+                [maxValue,index] = max([stats.Area]); %Guarda o Objeto com a Maior Area
+                [rw col]= size(stats);
+
                 numObj = ccBlack.NumObjects; % Conta o Numero de Objetos Detetados
                 if numObj == 8 %se detetar objectos
                     title("Sinal Perigo de Passadeira")
                 else
                     title("Sinal Perigo Derrocada")
                 end
-
-
             else
                 errordlg('Sem objeto');
             end
@@ -291,42 +303,3 @@ while n < 5 %caso chega a 5, parou, MASSS, perguntar ao chatGPT!!!
     end
 end
 end
-
-
-%                 elseif isTriangle == 1 % Se o Sinal for Triangular
-%                     filterBlack = createMaskBlackHSV(submask); % Aplica um Filtro Preto Para Ler os Objetos do Centro do Sinal
-%                     stats =  regionprops(filterBlack,'PixelIdxList','Area'); %Retira os Dados das Areas dos Ojetos Detetados
-%                     ccBlack = bwconncomp(filterBlack); % Bounding Box
-%                     numObj = ccBlack.NumObjects; % Conta o Numero de Objetos Detetados
-%                     if numObj ~= 0 %se detetar objectos
-%
-%                         %Array, guardar valor maximo, p explo no semaforo
-%                         %ve o maior e remove tudo a volta
-%                         [maxValue,index] = max([stats.Area]); % Guarda a Area Maior Que vai Ser o Objeto do Interior
-%                         [rw col]= size(stats);
-%                         for i=1:rw
-%                             if (i~=index)
-%                                 filterBlack(stats(i).PixelIdxList)=0; % Remove Todas as Pequenas Regions a Excepcao da Area Maior
-%                             end
-%                         end
-%                         stats =  regionprops(filterBlack,'PixelIdxList','Area','Centroid'); % Centro do Objeto
-%                         middleRow = stats.Centroid(2); % Define que o a Linha de Separacao para Contar Pixeis vai a Posicao da Coordenada Y do Centroid
-%                         upperHalf = floor(nnz(filterBlack(1:middleRow,:))); % Conta os Pixeis Brancos Acima do Centro do Objeto
-%                         lowerHalf = floor(nnz(filterBlack(middleRow+1:end,:))); % Conta os Pixeis Brancos Abaixo do Centro do Objeto
-%                         compare = abs(upperHalf - lowerHalf); % Pequena Comparacao na Diferenca dos Pixeis, pois o Sinal de Neve Teoricamente e Simetrico
-%                         if compare > 300 % Se a Diferenca for Maior que 300 Pixeis(Verificao Feita Depois de Varios Testes)
-%                             title('Sinal Perigo Lomba') % Display do Sinal
-%                         else
-%                             title('Sinal Perigo Neve') % Display do Sinal
-%                         end
-%                     else
-%                         title('Sinal de Perigo')
-%                     end
-%                 end
-%             else
-%                 errordlg('Sem objeto');
-%             end
-%             n = n+1; % sair do processamento
-%     end
-% end
-% end
