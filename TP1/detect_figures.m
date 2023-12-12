@@ -1,51 +1,41 @@
-function detect_figures(im)
+function [whichShape, isCircle, isTriangle, isSquare, isRectangle, BW2] = detect_figures(im)
+hFigure = figure(1);% Abre uma figura em tempo real
+imshow(im); % apresenta a imagem inicial
 
-gray = rgb2gray(im);
-figure, imshow(gray)
-m_bin = gray >10;
-figure, imshow(m_bin)
-%get stats
-%function to compute various properties of connected components in the binary image
-stats =  regionprops(m_bin,'Centroid', 'Circularity','MajorAxisLength','MinorAxisLength','Area');
-Centroid = cat(1, stats.Centroid);%Extract centroid coordinates:
-Area = cat(1,stats.Area);%extracting the area of the connected components and stores them in the Area variable
-Ratio = cat(1,stats.MajorAxisLength) - cat(1,stats.MinorAxisLength);% calculate the aspect ratio by subtracting the minor axis length from the major axis length 
+BW2 = [];  % Initialize BW2
 
-CircleMetric = cat(1,stats.Circularity);  %circularity metric
-SquareMetric = Ratio;
-TriangleMetric = NaN(length(CircleMetric),1);
+try
+stats =  regionprops(BW2,'PixelIdxList','Area','Centroid','MajorAxisLength','Circularity','MinorAxisLength'); %Retirar todas as Informcoes do Sinal
+Area = cat(1,stats.Area); % Area do Sinal
+Centroid = cat(1, stats.Centroid); % Centro do Sinal
+Ratio = cat(1,stats.MajorAxisLength) / cat(1,stats.MinorAxisLength); %Ratio
+MajorAxis = cat(1,stats.MajorAxisLength); % Lado Maior do Sinal
+CircleMetric = cat(1,stats.Circularity);  % Circularidade
+SquareMetric = Ratio; % Metrica do Quadrado
+TriangleMetric = NaN(length(CircleMetric),1);% Metrica do Triangulo
 
-boxArea = m_minbbarea(m_bin);
+boxArea = m_minbbarea(BW2);
 
-%for each boundary, fit to bounding box, and calculate some parameters
+%Para cada Limite, Colocar a Bounding Box e Calcular alguns Parametros
 for k=1:length(TriangleMetric),
-   TriangleMetric(k) = Area(k)/boxArea(k);  %filled area vs box area
+    TriangleMetric(k) = Area(k)/boxArea(k);  %Area Preenchida VS Area da Box
 end
-%define some thresholds for each metric
-%do in order of circle, triangle, square, rectangle to avoid assigning the
-%same shape to multiple objects
-isCircle =   (CircleMetric > 0.95);
+% Definir alguns Limites para Cada Metrica
+% Circulo-Triangulo-Quadrado-Retangulo-Pentagono para Evitar a mesma Forma em Varios Objetos
+isCircle =   (CircleMetric > 0.85);
 isTriangle = ~isCircle & (TriangleMetric < 0.65);
 isSquare =   ~isCircle & ~isTriangle & (SquareMetric < 1) & (TriangleMetric > 0.9);
-isRectangle= ~isCircle & ~isTriangle & ~isSquare & (TriangleMetric > 0.9);
-isPentagono= ~isCircle & ~isTriangle & ~isSquare & ~isRectangle;%isn't any of these
-%assign shape to each object
+isRectangle = ~isCircle & ~isTriangle & ~isSquare & (TriangleMetric > 0.9);
+
+% Atribuir a Forma a cada Objeto
 whichShape = cell(length(TriangleMetric),1);
-whichShape(isCircle) = {'Circle'};
-whichShape(isTriangle) = {'Triangle'};
-whichShape(isSquare) = {'Square'};
-whichShape(isRectangle)= {'Rectangle'};
-whichShape(isPentagono)= {'Pentagono/hexagono'};
-%now label with results
-RGB = label2rgb(bwlabel(m_bin));
-figure, imshow(RGB); hold on;
-pause(1)
-Combined = [CircleMetric, SquareMetric, TriangleMetric];
-for k=1:length(TriangleMetric),
-   %display metric values and which shape next to object
-   Txt = sprintf('C=%0.3f S=%0.3f T=%0.3f',  Combined(k,:));
-   text( Centroid(k,1)-20, Centroid(k,2), Txt);
-   text( Centroid(k,1)-20, Centroid(k,2)+20, whichShape{k});
+whichShape(isCircle) = {'Circulo'};
+whichShape(isTriangle) = {'Triangulo'};
+whichShape(isSquare) = {'Quadrado'};
+whichShape(isRectangle)= {'Retangulo'};
+
+catch
+        % Handle any errors here, if needed
 end
-end
+%fim filtro
 
